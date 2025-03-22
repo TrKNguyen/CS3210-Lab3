@@ -41,10 +41,16 @@ echo "NVCC info: $($NVCC --version)"
 
 # Actually compile the code
 echo -e "\n====> Compiling...\n"
-$NVCC -arch native -O3 --std=c++17 -o printing printing.cu
+$NVCC -arch sm_70 -O3 --std=c++17 -o sum sum.cu
 echo -e "\n====> Running...\n"
-./printing
+./sum
+echo -e "\n====> Finished running 1.\n"
 
-echo -e "\n====> Finished running.\n"
+# Actually compile the code#
+#echo -e "\n====> Compiling...\n"#
+#$NVCC -arch sm_70 -O3 --std=c++17 -o cudaMalloc_comm_unified cudaMalloc_comm_unified.cu#
+#echo -e "\n====> Running...\n"#
+#./cudaMalloc_comm_unified#
+#echo -e "\n====> Finished running 2.\n"
 
 echo -e "\nJob completed at $(date)"
