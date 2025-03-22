@@ -40,6 +40,13 @@ __global__ void reduceAtomicShared(const unsigned long long* __restrict input, u
     const unsigned long long id = threadIdx.x + blockIdx.x * blockDim.x;
 
     // TODO: Your code here
+    __shared__ int sum = 0;
+    if (id < N) {
+        sum += input[id];
+    }
+    if (threadIdx.x == 0) {
+        atomicAdd(&dResult, sum);
+    }
 }
 
 /*
