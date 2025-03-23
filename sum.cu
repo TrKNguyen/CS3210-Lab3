@@ -40,12 +40,15 @@ __global__ void reduceAtomicShared(const unsigned long long* __restrict input, u
     const unsigned long long id = threadIdx.x + blockIdx.x * blockDim.x;
 
     // TODO: Your code here
-    __shared__ int sum = 0;
+    __shared__ int sum; 
+    sum = 0;
     if (id < N) {
-        sum += input[id];
+	atomicAdd(&sum, input[id]); 
     }
+    __syncthreads();
+    //std::cout << sum << "\n";
     if (threadIdx.x == 0) {
-        atomicAdd(&dResult, sum);
+	atomicAdd(&dResult, sum);
     }
 }
 
@@ -74,6 +77,9 @@ __global__ void reduceAtomicShared(const unsigned long long* __restrict input, u
  (Note: the template here lets the size of the data array be static at compile time. You don't have to understand this.)
 
 */
+__device__ __managed__ int numBlock = 39168;
+__device__ __managed__ int realNumBlock = 39063;
+__device__ __managed__ unsigned long long dataBlock[39168];
 template <unsigned int BLOCK_SIZE>
 __global__ void reduceShared(const unsigned long long* __restrict input, unsigned long long N)
 {
@@ -84,6 +90,92 @@ __global__ void reduceShared(const unsigned long long* __restrict input, unsigne
     */
     __shared__ unsigned long long data[BLOCK_SIZE];
 
+    // phrase 1
+    int idx = threadIdx.x;
+    if (id < N) {
+	data[idx] = input[id]; 
+    } else {
+    	data[idx] = 0;
+    }
+    for (int i = 2; i <= BLOCK_SIZE; i<<=1) {
+	if (idx % i != 0) {
+             if (id >= numBlock) {
+		     return;
+	     }	     
+	}    
+	else {
+	     data[idx] += data[idx + (i >> 1)];
+	}
+	__syncthreads();
+    }
+    if (idx == 0) {
+	    dataBlock[blockIdx.x] = data[0];
+	    //atomicAdd(&dResult, data[0]);
+	    //printf("sth wrong %llu %llu %llu\n", id, data[0], dataBlock[blockIdx.x]); 
+    } 
+    //cudaDeviceSynchronize();
+    // phrase 2, 0 -> 39167
+    //printf("wtf %llu %llu\n", id, realNumBlock);
+    //if (id >= numBlock) return;
+   // printf("wtf %llu %llu\n", id, realNumBlock);
+    if (id == 0) {
+	for (int i = 0; i < realNumBlock; i++) {
+	 //	printf("check %llu", dataBlock[i]);
+	}
+    }
+    //return;
+    if (id < realNumBlock) {
+	while (!dataBlock[id]) {
+		printf("Fuck");
+	}
+    	data[idx] = dataBlock[id];
+	dataBlock[id] = 0;
+	//printf("inside %llu %llu\n", id, dataBlock[id]);
+    } else {
+	data[idx] = 0;
+    }
+    __syncthreads();
+    //printf(" wrong %d %llu %llu \n", idx, data[idx], dataBlock[id]); 
+    return;
+    for (int i = 2; i <= BLOCK_SIZE; i<<=1) {
+	if (idx % i != 0) {
+             if (id >= 256) {
+		     return;
+	     }	     
+	}    
+	else {
+	     data[idx] += data[idx + (i >> 1)];
+	}
+	__syncthreads();
+    }
+    if (idx == 0) {
+	    dataBlock[blockIdx.x] = data[0];
+	    //atomicAdd(&dResult, data[0]);
+	    // printf(" wrong %llu %llu\n", id, data[0]); 
+    } 
+    if (id >= 256) {
+	return;
+    }
+    return;
+    //cudaDeviceSynchronize();
+    // phrase 3, 0 -> 255 
+    if (id < 153) {
+	while (!dataBlock[id]) {}
+    	data[idx] = dataBlock[id];
+    } else {
+	data[idx] = 0;
+    }
+    __syncthreads();
+    for (int i = 2; i <= BLOCK_SIZE; i<<=1) {
+	if (idx % i != 0) {
+             return;	     
+	}    
+	else {
+	     data[idx] += data[idx + (i >> 1)];
+	}
+	__syncthreads();
+    }
+    atomicAdd(&dResult, data[0]);
     // TODO: your code here
 }
 
